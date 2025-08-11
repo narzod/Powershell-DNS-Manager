@@ -1,0 +1,199 @@
+# PowerShell DNS Manager
+
+A simple, conventional PowerShell module for quickly checking and changing DNS settings from the command line. This tool provides an easy way to switch between different DNS providers (Google, Cloudflare, ad-blocking services) without the complexity of GUI network settings.
+
+## Features
+
+- **Quick DNS checking**: View current DNS settings for all or specific network interfaces
+- **Easy DNS switching**: Change DNS servers with simple commands
+- **Automatic elevation**: Prompts for admin privileges when needed
+- **DHCP restoration**: Easily revert to automatic DNS settings
+- **Input validation**: Validates IP addresses before applying changes
+- **Clean output**: Structured, pipeline-friendly results
+
+## Installation
+
+### Quick Setup (Recommended)
+
+1. **Create the module directory**:
+   ```powershell
+   $ModulePath = "$env:USERPROFILE\Documents\PowerShell\Modules\DnsManager"
+   New-Item -ItemType Directory -Path $ModulePath -Force
+   ```
+
+2. **Download and place the module files**:
+   - Save `DnsManager.psm1` to the directory created above
+   - Save `DnsManager.psd1` to the same directory
+
+3. **Import the module**:
+   ```powershell
+   Import-Module DnsManager
+   ```
+
+4. **Add to your PowerShell profile for automatic loading**:
+   ```powershell
+   Add-Content $PROFILE "`nImport-Module DnsManager"
+   ```
+
+### Alternative: Temporary Import
+You can also import the module temporarily from any location:
+```powershell
+Import-Module .\DnsManager.psd1
+```
+
+## Usage
+
+### Check Current DNS Settings
+```powershell
+# View DNS for all active interfaces
+Get-Dns
+
+# View DNS for specific interface
+Get-Dns -Interface "Wi-Fi"
+Get-Dns "Ethernet"
+```
+
+### Change DNS Settings
+```powershell
+# Set Google DNS
+Set-Dns -Interface "Wi-Fi" -DnsServer "8.8.8.8", "8.8.4.4"
+
+# Set Cloudflare DNS
+Set-Dns "Ethernet" -DnsServer "1.1.1.1", "1.0.0.1"
+
+# Set single DNS server
+Set-Dns "Wi-Fi" -DnsServer "9.9.9.9"
+
+# Revert to automatic/DHCP
+Set-Dns "Ethernet" -Dhcp
+```
+
+## Popular DNS Providers
+
+### Public DNS Services
+| Provider | Primary DNS | Secondary DNS | Notes |
+|----------|-------------|---------------|--------|
+| **Google** | `8.8.8.8` | `8.8.4.4` | Fast, reliable, widely used |
+| **Cloudflare** | `1.1.1.1` | `1.0.0.1` | Privacy-focused, very fast |
+| **Quad9** | `9.9.9.9` | `149.112.112.112` | Security and privacy focused |
+| **OpenDNS** | `208.67.222.222` | `208.67.220.220` | Content filtering options |
+
+### Ad-Blocking DNS Services
+| Provider | Primary DNS | Secondary DNS | Blocks |
+|----------|-------------|---------------|---------|
+| **AdGuard** | `94.140.14.14` | `94.140.15.15` | Ads, trackers, malware |
+| **CleanBrowsing** | `185.228.168.9` | `185.228.169.9` | Ads, malware, adult content |
+| **Quad9 Secured** | `9.9.9.9` | `149.112.112.112` | Malware, phishing |
+| **NextDNS** | Custom IPs | Custom IPs | Highly customizable filtering |
+
+### Family-Safe DNS
+| Provider | Primary DNS | Secondary DNS | Features |
+|----------|-------------|---------------|----------|
+| **OpenDNS Family** | `208.67.222.123` | `208.67.220.123` | Blocks adult content |
+| **CleanBrowsing Family** | `185.228.168.168` | `185.228.169.168` | Family-friendly filtering |
+
+## Advanced Usage
+
+### Creating DNS Presets
+You can create wrapper scripts for quick DNS switching:
+
+**GoogleDNS.ps1**:
+```powershell
+param([string]$Interface = "Wi-Fi")
+Set-Dns -Interface $Interface -DnsServer "8.8.8.8", "8.8.4.4"
+Write-Host "Switched $Interface to Google DNS"
+```
+
+**AdBlockDNS.ps1**:
+```powershell
+param([string]$Interface = "Wi-Fi")
+Set-Dns -Interface $Interface -DnsServer "94.140.14.14", "94.140.15.15"
+Write-Host "Switched $Interface to AdGuard DNS (ad-blocking enabled)"
+```
+
+**ResetDNS.ps1**:
+```powershell
+param([string]$Interface = "Wi-Fi")
+Set-Dns -Interface $Interface -Dhcp
+Write-Host "Reset $Interface to automatic DNS"
+```
+
+### Batch Operations
+```powershell
+# Apply same DNS to multiple interfaces
+@("Wi-Fi", "Ethernet") | ForEach-Object {
+    Set-Dns -Interface $_ -DnsServer "1.1.1.1", "1.0.0.1"
+}
+
+# Check all interfaces and export to file
+Get-Dns | Export-Csv -Path "dns-settings.csv" -NoTypeInformation
+```
+
+## Why This Tool Follows PowerShell Best Practices
+
+This DNS Manager is designed to demonstrate PowerShell development conventions and showcase the platform's built-in capabilities:
+
+### **Native PowerShell Integration**
+- **Leverages existing cmdlets**: Uses `Get-NetAdapter`, `Get-DnsClientServerAddress`, and `Set-DnsClientServerAddress` rather than reinventing functionality
+- **Pipeline compatibility**: Returns structured objects that work seamlessly with PowerShell's pipeline
+- **Parameter validation**: Uses PowerShell's built-in parameter binding and validation systems
+
+### **PowerShell Module Conventions**
+- **Comment-based help**: Comprehensive `.SYNOPSIS`, `.DESCRIPTION`, `.EXAMPLE`, and `.PARAMETER` documentation
+- **Proper verb naming**: Follows PowerShell approved verbs (`Get-Dns`, `Set-Dns`)
+- **Parameter sets**: Uses `DefaultParameterSetName` to create mutually exclusive parameter groups
+- **CmdletBinding**: Enables advanced function features like `-Verbose` and `-WhatIf` support
+
+### **User-Focused Design Patterns**
+- **Automatic elevation**: Handles UAC prompts transparently when administrative privileges are required
+- **Intelligent defaults**: Shows all active interfaces by default, accepts positional parameters
+- **Clear error messages**: Provides specific, actionable feedback when operations fail
+- **Input validation**: Validates IP addresses before attempting DNS changes
+
+### **Security and Reliability**
+- **Interface validation**: Confirms network interfaces exist before attempting changes
+- **Graceful error handling**: Uses try-catch blocks and proper error reporting
+- **Administrative checks**: Verifies privileges before attempting system changes
+- **Safe parameter reconstruction**: Handles elevation parameter passing securely
+
+This approach demonstrates how PowerShell's rich feature set can enable the creation of administrative tools with minimal code while maintaining security, usability, and extensibility principles.
+
+## Requirements
+
+- **Operating System**: Windows 10/11 or Windows Server 2016+
+- **PowerShell**: Windows PowerShell 5.1 or PowerShell 7+
+- **Privileges**: Administrator rights for DNS changes (automatic elevation handled)
+- **Network**: Active network interfaces
+
+## Troubleshooting
+
+### Common Issues
+
+**"Interface not found"**
+- Run `Get-NetAdapter` to see available interface names
+- Interface names are case-sensitive and must match exactly
+
+**"Access Denied"**
+- Ensure you approve the UAC prompt when it appears
+- Try running PowerShell as Administrator manually
+
+**"Invalid IP address"**
+- Verify DNS server addresses are valid IPv4 addresses
+- Check for typos in IP addresses
+
+### Getting Interface Names
+```powershell
+# List all network interfaces
+Get-NetAdapter | Select-Object Name, Status, LinkSpeed
+
+# List only active interfaces
+Get-NetAdapter | Where-Object Status -eq "Up"
+```
+
+## Contributing
+
+This project showcases PowerShell's capabilities for system administration. Contributions that maintain the simplicity and demonstrate additional PowerShell best practices are welcome.
+
+## License
+
+This project is released under the MIT License. Feel free to modify and distribute as needed.
