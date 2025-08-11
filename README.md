@@ -5,10 +5,12 @@ A simple, conventional PowerShell module for quickly checking and changing DNS s
 ## Features
 
 - **Quick DNS checking**: View current DNS settings for all or specific network interfaces
-- **Easy DNS switching**: Change DNS servers with simple commands
+- **DNS presets**: Built-in presets for popular providers (Google, Cloudflare, AdGuard, etc.)
+- **Easy DNS switching**: Change DNS servers with simple commands or convenient aliases
+- **Tab completion**: Auto-complete for both interface names and DNS preset names
 - **Automatic elevation**: Prompts for admin privileges when needed
 - **DHCP restoration**: Easily revert to automatic DNS settings
-- **Input validation**: Validates IP addresses before applying changes
+- **Input validation**: Validates IP addresses and interface names before applying changes
 - **Clean output**: Structured, pipeline-friendly results
 
 ## Installation
@@ -24,6 +26,7 @@ A simple, conventional PowerShell module for quickly checking and changing DNS s
 2. **Download and place the module files**:
    - Save `DnsManager.psm1` to the directory created above
    - Save `DnsManager.psd1` to the same directory
+   - Both files are required for full functionality including DNS presets
 
 3. **Import the module**:
    ```powershell
@@ -55,17 +58,54 @@ Get-Dns "Ethernet"
 
 ### Change DNS Settings
 ```powershell
-# Set Google DNS
-Set-Dns -Interface "Wi-Fi" -DnsServer "8.8.8.8", "8.8.4.4"
+# Set Google DNS using preset
+Set-Dns -Interface "Wi-Fi" -DnsPreset "Google"
 
-# Set Cloudflare DNS
-Set-Dns "Ethernet" -DnsServer "1.1.1.1", "1.0.0.1"
+# Set Cloudflare DNS using preset
+Set-Dns "Ethernet" -DnsPreset "Cloudflare"
+
+# Use manual IP addresses
+Set-Dns -Interface "Wi-Fi" -DnsServer "8.8.8.8", "8.8.4.4"
 
 # Set single DNS server
 Set-Dns "Wi-Fi" -DnsServer "9.9.9.9"
 
 # Revert to automatic/DHCP
 Set-Dns "Ethernet" -Dhcp
+```
+
+### View Available DNS Presets
+```powershell
+# List all available DNS presets
+Get-DnsPresets
+```
+
+### Quick Preset Functions and Aliases
+```powershell
+# Using preset functions (with tab completion)
+Set-GoogleDns -Interface "Ethernet"
+Set-CloudflareDns -Interface "Wi-Fi" 
+Set-AdBlockDns -Interface "Ethernet"
+Reset-Dns -Interface "Wi-Fi"
+
+# Using convenient aliases
+dns-google "Ethernet"     # Set Google DNS
+dns-cf "Wi-Fi"           # Set Cloudflare DNS  
+dns-adblock "Ethernet"   # Set AdGuard DNS
+dns-reset "Wi-Fi"        # Reset to DHCP
+```
+
+### Tab Completion Support
+Both interface names and DNS presets support tab completion:
+```powershell
+# Tab completion for interfaces
+Set-Dns -Interface <TAB>
+
+# Tab completion for DNS presets
+Set-Dns -Interface "Wi-Fi" -DnsPreset <TAB>
+
+# Works with all functions and aliases
+dns-google -Interface <TAB>
 ```
 
 ## Popular DNS Providers
@@ -189,6 +229,20 @@ Get-NetAdapter | Select-Object Name, Status, LinkSpeed
 # List only active interfaces
 Get-NetAdapter | Where-Object Status -eq "Up"
 ```
+
+## Known Issues / TODO
+
+### Elevation Issue
+Currently, the automatic elevation feature (UAC prompt) may not work reliably in all scenarios. If you encounter "Access Denied" errors:
+
+**Workaround**: Run PowerShell as Administrator manually before using DNS-changing commands:
+```powershell
+# Right-click PowerShell and "Run as Administrator", then:
+Import-Module DnsManager
+Set-Dns -Interface "Wi-Fi" -DnsPreset "Google"
+```
+
+This will be addressed in a future update.
 
 ## Contributing
 
