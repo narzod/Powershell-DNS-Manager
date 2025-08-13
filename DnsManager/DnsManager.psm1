@@ -3,13 +3,36 @@
 #
 # This file contains the functions for the DnsManager PowerShell module.
 
+# Get the module's root directory to locate the DnsPresets.psd1 file
+$script:ModuleRoot = $PSScriptRoot
+$script:DnsPresetsPath = Join-Path $script:ModuleRoot 'DnsPresets.psd1'
+
+# Load DNS presets from the separate data file
+function Get-DnsPresetsData {
+    [CmdletBinding()]
+    param()
+    
+    if (-not (Test-Path $script:DnsPresetsPath)) {
+        Write-Error "DNS presets file not found at: $script:DnsPresetsPath"
+        return $null
+    }
+    
+    try {
+        $presets = Import-PowerShellDataFile -Path $script:DnsPresetsPath
+        return $presets
+    } catch {
+        Write-Error "Failed to load DNS presets: $($_.Exception.Message)"
+        return $null
+    }
+}
+
 <#
 .SYNOPSIS
-    Retrieves and displays the DNS presets from the module manifest.
+    Retrieves and displays the DNS presets from the DnsPresets.psd1 data file.
 
 .DESCRIPTION
     This command-line tool fetches a list of predefined DNS server configurations,
-    such as Google or Cloudflare, from the DnsManager module's manifest file.
+    such as Google or Cloudflare, from the DnsPresets.psd1 data file.
 
 .EXAMPLE
     Get-DnsPresets
@@ -20,22 +43,14 @@ function Get-DnsPresets {
     [CmdletBinding()]
     param()
 
-    # Get the module object to access the manifest's private data
-    $module = Get-Module -Name DnsManager
-
-    if ($null -eq $module) {
-        Write-Error "DnsManager module is not loaded."
-        return
-    }
-
-    $presets = $module.PrivateData.PSData.DnsPresets
+    $presets = Get-DnsPresetsData
 
     if ($null -eq $presets) {
-        Write-Warning "No DNS presets found in the module manifest."
+        Write-Warning "No DNS presets found in the data file."
         return
     }
 
-    # Create a custom object for each preset to format the output
+    # Create a custom object for each preset and return without formatting
     $presets.Keys | ForEach-Object {
         $presetName = $_
         $presetData = $presets[$presetName]
@@ -44,7 +59,7 @@ function Get-DnsPresets {
             Primary = $presetData.Primary
             Secondary = $presetData.Secondary
         }
-    } | Format-Table -AutoSize
+    }
 }
 
 # This is a private helper function and will not be exported.
@@ -56,13 +71,11 @@ function Get-DnsPreset {
         [string]$PresetName
     )
 
-    $module = Get-Module -Name DnsManager
-    if ($null -eq $module) {
-        Write-Error "DnsManager module is not loaded."
-        return
-    }
+    $presets = Get-DnsPresetsData
     
-    $presets = $module.PrivateData.PSData.DnsPresets
+    if ($null -eq $presets) {
+        return $null
+    }
     
     if ($presets.ContainsKey($PresetName)) {
         return $presets[$PresetName]
@@ -79,14 +92,13 @@ function Get-PresetNames {
         [string]$wordToComplete = ''
     )
     
-    $module = Get-Module -Name DnsManager
-    if ($null -eq $module) {
-        # If the module isn't loaded, return an empty array to prevent errors.
+    $presets = Get-DnsPresetsData
+    if ($null -eq $presets) {
         return @()
     }
     
     # Get preset names and filter based on what user has typed
-    $presetNames = $module.PrivateData.PSData.DnsPresets.Keys
+    $presetNames = $presets.Keys
     
     # Filter results based on what the user has typed so far
     if ($wordToComplete) {
@@ -171,7 +183,7 @@ function Get-Dns {
             ConnectionStatus = $_.Status
             CurrentDnsServers = $dnsString
         }
-    } | Format-Table -AutoSize
+    } # | Format-Table -AutoSize
 }
 
 <#
@@ -180,19 +192,19 @@ function Get-Dns {
 
 .DESCRIPTION
     This tool modifies the DNS server settings for a network interface.
-    It requires administrative privileges and will prompt for them if needed.
+    Administrative privileges are required. Run PowerShell as Administrator before using this command.
 
 .EXAMPLE
     Set-Dns -Interface 'Ethernet' -DnsServer '8.8.8.8', '8.8.4.4'
-    Sets Google DNS for the 'Ethernet' interface. This will prompt for elevation.
+    Sets Google DNS for the 'Ethernet' interface.
 
 .EXAMPLE
     Set-Dns -Interface 'Wi-Fi' -Dhcp
-    Reverts the 'Wi-Fi' interface to use DNS from DHCP (automatic). This will prompt for elevation.
+    Reverts the 'Wi-Fi' interface to use DNS from DHCP (automatic).
     
 .EXAMPLE
     Set-Dns -Interface 'Ethernet' -DnsPreset 'Google'
-    Sets DNS using the 'Google' preset defined in the module manifest.
+    Sets DNS using the built-in 'Google' preset. Use Get-DnsPresets to see all available presets.
 
 .PARAMETER Interface
     The name of the network interface to be modified.
@@ -202,9 +214,8 @@ function Get-Dns {
     This parameter is part of the 'ManualIP' parameter set.
 
 .PARAMETER DnsPreset
-    The name of a DNS preset defined in the module manifest.
-    This parameter is part of the 'PresetName' parameter set. The available presets
-    are automatically populated for tab completion.
+    The name of a built-in DNS preset such as 'Google', 'Cloudflare', or 'AdGuard'.
+    This parameter is part of the 'PresetName' parameter set. Use Get-DnsPresets to see all available options.
 
 .PARAMETER Dhcp
     A switch to revert the interface to use DNS from DHCP (automatic).
@@ -251,35 +262,45 @@ function Set-Dns {
         [ArgumentCompleter({
             param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
             
-            # Get the module and presets directly in the completer
-            $module = Get-Module -Name DnsManager
-            if ($null -eq $module -or $null -eq $module.PrivateData.PSData.DnsPresets) {
+            # Load presets from the data file
+            $presetsPath = Join-Path $PSScriptRoot 'DnsPresets.psd1'
+            if (-not (Test-Path $presetsPath)) {
                 return @()
             }
             
-            $presets = $module.PrivateData.PSData.DnsPresets.Keys
-            
-            # Filter and return completion results
-            $results = if ($wordToComplete) {
-                $presets | Where-Object { $_ -like "$wordToComplete*" }
-            } else {
-                $presets
-            }
-            
-            # Return as CompletionResult objects to override file completion
-            return $results | ForEach-Object {
-                [System.Management.Automation.CompletionResult]::new(
-                    $_,           # CompletionText
-                    $_,           # ListItemText  
-                    'ParameterValue', # ResultType
-                    "DNS Preset: $_"  # ToolTip
-                )
+            try {
+                $presets = Import-PowerShellDataFile -Path $presetsPath
+                $presetNames = $presets.Keys
+                
+                # Filter and return completion results
+                $results = if ($wordToComplete) {
+                    $presetNames | Where-Object { $_ -like "$wordToComplete*" }
+                } else {
+                    $presetNames
+                }
+                
+                # Return as CompletionResult objects to override file completion
+                return $results | ForEach-Object {
+                    [System.Management.Automation.CompletionResult]::new(
+                        $_,           # CompletionText
+                        $_,           # ListItemText  
+                        'ParameterValue', # ResultType
+                        "DNS Preset: $_"  # ToolTip
+                    )
+                }
+            } catch {
+                return @()
             }
         })]
         [ValidateScript({
-            $module = Get-Module -Name DnsManager
-            if ($null -ne $module -and $null -ne $module.PrivateData.PSData.DnsPresets) {
-                return $module.PrivateData.PSData.DnsPresets.ContainsKey($_)
+            $presetsPath = Join-Path $PSScriptRoot 'DnsPresets.psd1'
+            if (Test-Path $presetsPath) {
+                try {
+                    $presets = Import-PowerShellDataFile -Path $presetsPath
+                    return $presets.ContainsKey($_)
+                } catch {
+                    return $false
+                }
             }
             return $false
         })]
@@ -309,24 +330,10 @@ function Set-Dns {
         }
     }
     
-    # Check for elevation and re-run as admin if needed
+    # Check for administrative privileges
     if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Write-Host "This command requires administrative privileges. Please approve the UAC prompt."
-        
-        # Build parameter string for elevation
-        $params = $PSBoundParameters
-        $paramString = ($params.GetEnumerator() | ForEach-Object { 
-            if ($_.Value -is [array]) {
-                "-{0} '{1}'" -f $_.Key, ($_.Value -join "','")
-            } elseif ($_.Value -is [switch] -and $_.Value) {
-                "-{0}" -f $_.Key
-            } else {
-                "-{0} '{1}'" -f $_.Key, $_.Value
-            }
-        }) -join ' '
-        
-        $command = "Import-Module DnsManager; Set-Dns $paramString"
-        Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $command
+        Write-Warning "Access denied. This operation requires administrative privileges."
+        Write-Host "Please run PowerShell as Administrator and try again." -ForegroundColor Yellow
         return
     }
 
