@@ -1,40 +1,64 @@
 # **Guide to Installing the `DnsManager` PowerShell Module**
 
-This guide provides detailed instructions on how to install the **`DnsManager`** PowerShell module on your system. It covers both a preferred method and a manual alternative, and includes guidance on maintenance and updating.
+This guide provides detailed instructions on how to install the **`DnsManager`** PowerShell module. It covers both the preferred method using the provided installation script and alternative manual installation options.
 
 -----
 
-## **Preferred Method: Using `Install-Module`**
+## **Preferred Method: Using the `Install-DnsManager.ps1` Script**
 
-The recommended way to install **`DnsManager`** is by using the built-in `Install-Module` cmdlet. This method is the standard and most reliable approach for managing PowerShell modules. While this is the preferred method, some users in specific environments may encounter issues. If you run into problems, you can safely skip to the manual installation steps outlined below.
+The **recommended** and most straightforward way to install the **`DnsManager`** module is by using the `Install-DnsManager.ps1` script. This script automates the installation process, ensuring the module is correctly placed and configured on your system. Using this script is the preferred method because it simplifies the process and reduces the potential for errors.
 
 ### **Installation Steps**
 
-1.  **Open PowerShell as an Administrator**: You must have administrative privileges to install a module for all users on the system. Right-click the PowerShell icon and select **"Run as Administrator"**.
+1.  **Open PowerShell as an Administrator**: To install the module for all users on the system, you must have administrative privileges.
 
-2.  **Navigate to the Module Directory**: Use the `Set-Location` (or `cd`) cmdlet to navigate to the directory where you have downloaded or cloned the module's source code. For example:
-
-    ```powershell
-    cd C:\Path\To\DnsManager
-    ```
-
-3.  **Run the `Install-Module` Command**: Execute the following command to install the module. The `-Scope AllUsers` parameter is crucial as it ensures the module is installed in a system-wide location, making it available to all users.
+2.  **Navigate to the Script's Directory**: Use the `Set-Location` (or `cd`) cmdlet to navigate to the root of the repository where you have downloaded the source code. This directory should contain both the `DnsManager` module folder and the `Install-DnsManager.ps1` script. For example:
 
     ```powershell
-    Install-Module -Name DnsManager -Scope AllUsers -Path "C:\Path\To\DnsManager"
+    cd C:\Path\To\DnsManager-Repo
     ```
 
-    **Note**: The `-Path` parameter is essential for installing from a local directory. When installing from a public repository like the PowerShell Gallery, you would omit this parameter.
+3.  **Run the Installation Script**: Execute the script using a relative or absolute path. The script will handle the necessary steps to install the module in a system-wide location.
+
+    ```powershell
+    .\Install-DnsManager.ps1
+    ```
+
+    **Note**: Depending on your system's execution policy, you may need to temporarily change it to run the script.
 
 -----
 
 ## **Alternative Method: Manual Installation**
 
-This method involves manually copying the module files to the correct system directory. It is a suitable alternative if you encounter issues with the `Install-Module` cmdlet or have special installation requirements.
+This section outlines how to manually install the `DnsManager` module. This is a suitable alternative if you encounter issues with the automated script, have special installation requirements, or prefer a manual approach.
 
-### **Installation Steps**
+### **Option 1: Using `Install-Module` from a Local Source**
 
-1.  **Open PowerShell as an Administrator**: Just like the preferred method, this requires administrative access.
+This method uses the built-in `Install-Module` cmdlet to install the module from a local directory. This is the standard and most reliable approach for managing PowerShell modules, even when not using the installation script.
+
+#### **Installation Steps**
+
+1.  **Open PowerShell as an Administrator**: This requires administrative privileges.
+
+2.  **Navigate to the Module Directory**: Use `cd` to navigate to the root of the repository, which contains the **`DnsManager`** folder. For example:
+
+    ```powershell
+    cd C:\Path\To\DnsManager-Repo
+    ```
+
+3.  **Run the `Install-Module` Command**: Execute the following command. The `-Scope AllUsers` parameter ensures the module is installed in a system-wide location. The `-Path` parameter specifies the local source directory, which in this case is the `DnsManager` folder inside your current location.
+
+    ```powershell
+    Install-Module -Name DnsManager -Scope AllUsers -Path "C:\Path\To\DnsManager-Repo\DnsManager"
+    ```
+
+### **Option 2: Copying Files Manually**
+
+This method involves manually copying the module files to the correct system directory. It's a low-level approach that is useful if the other methods fail.
+
+#### **Installation Steps**
+
+1.  **Open PowerShell as an Administrator**: This also requires administrative access.
 
 2.  **Locate the Module Path**: Determine the correct system-wide path for modules by running the following command. The output will list several paths; a common one is `C:\Program Files\PowerShell\Modules`.
 
@@ -42,65 +66,47 @@ This method involves manually copying the module files to the correct system dir
     $env:PSModulePath -split ';'
     ```
 
-3.  **Copy the Module Folder**: Copy the entire `DnsManager` directory from its current location to one of the paths you identified in the previous step. The `Copy-Item` cmdlet can be used for this:
+3.  **Copy the Module Folder**: Copy the entire `DnsManager` directory from its location within the repository to one of the paths you identified. The `Copy-Item` cmdlet can be used for this:
 
     ```powershell
-    Copy-Item -Path "C:\Path\To\DnsManager" -Destination "C:\Program Files\PowerShell\Modules" -Recurse
+    Copy-Item -Path "C:\Path\To\DnsManager-Repo\DnsManager" -Destination "C:\Program Files\PowerShell\Modules" -Recurse
     ```
 
-    The `-Recurse` parameter ensures all subdirectories and files are copied correctly.
-
------
-
-## **Temporary Use: Using `Import-Module`**
-
-If you don't need to permanently install the module but just want to use it for the current PowerShell session, you can use the `Import-Module` cmdlet directly with the module's path. This does **not** install the module system-wide.
-
-### **How to Use**
-
-1.  **Open a regular PowerShell session**. Administrator privileges are not needed unless the module's functions require them.
-
-2.  **Import the module**: Run the following command, specifying the full path to the module folder.
-
-    ```powershell
-    Import-Module -Name DnsManager -Scope AllUsers -Path "C:\Path\To\DnsManager"
-    ```
-
-    The module's cmdlets will now be available for use until the PowerShell window is closed.
+    The `-Recurse` parameter ensures all subdirectories and files are copied.
 
 -----
 
 ## **Module Maintenance**
 
-After installation, you can perform some basic checks and maintenance using these commands.
+This section covers basic maintenance tasks, such as checking the installed version and updating the module.
 
 ### **Checking the Module Version**
 
-To see which version of `DnsManager` is installed, you can use `Get-Module` with the `-ListAvailable` parameter.
+To see which version of `DnsManager` is installed, use the `Get-Module` cmdlet with the `-ListAvailable` parameter.
 
 ```powershell
 Get-Module -Name DnsManager -ListAvailable
 ```
 
-The output will show you details like the module's version and where it's installed.
+The output will show details like the module's version and installation path.
 
 ### **Updating the Module**
 
-When a new version of the module is released, you can update your installed version. While the `Update-Module` cmdlet is typically used for modules from a gallery, for a local installation, you will use `Install-Module` with the `-Force` parameter. This effectively overwrites the existing module with the new files.
+To update your module, you can simply run the `Install-DnsManager.ps1` script again. The script is designed to handle updates by overwriting existing files. If you are using a manual installation method, you can use the `Install-Module` command with the new module files and the `-Force` parameter.
 
 1.  **Open PowerShell as an Administrator**.
 
-2.  **Navigate to the new module directory**.
+2.  **Navigate to the new module directory**: `cd` to the root of the updated repository.
 
-3.  **Run the `Install-Module` command again**: This will overwrite the existing module files with the newer ones, effectively updating the module.
+3.  **Run the update command**: This will overwrite the existing module files.
 
     ```powershell
-    Install-Module -Name DnsManager -Scope AllUsers -Path "C:\Path\To\NewDnsManager" -Force
+    Install-Module -Name DnsManager -Scope AllUsers -Path "C:\Path\To\NewDnsManager-Repo\DnsManager" -Force
     ```
 
 ### **Verification**
 
-After performing any installation or update, you can verify that the module is installed and available by running the following command.
+After any installation or update, you can verify that the module is correctly installed and available by running the following command.
 
 ```powershell
 Get-Module -ListAvailable DnsManager

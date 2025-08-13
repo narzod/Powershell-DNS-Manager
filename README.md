@@ -30,7 +30,7 @@ The installer will check for existing installations, validate the module, and in
 ```
 
 ### Manual Installation
-For advanced users who prefer manual installation, see the detailed guide in `/docs/manual-installation.md`.
+For manual installation, refer to the Installation Guide in the /docs directory.
 
 ## Usage
 
